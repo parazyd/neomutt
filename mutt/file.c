@@ -1381,7 +1381,7 @@ int mutt_file_check_empty(const char *path)
 }
 
 /**
- * mutt_file_tidy_path - resolve path, unraveling symlinks
+ * mutt_file_tidy_path - Tidy a path with optional symlink resolution
  * @param buf Buffer containing path
  * @param rsym Boolean specifying whether to resolve symlinks
  * @retval len String length of resolved path
@@ -1410,12 +1410,12 @@ size_t mutt_file_tidy_path(char *buf, bool rsym)
       char *q = buf, *r = buf;
       while (*r)
       {
-        if (*r == '/' && r[1] == '/')
+        if ((r[0] == '/') && (r[1] == '/'))
         {
           *q++ = '/';
           r += 2;
         }
-        else if (r[0] == '/' && r[1] == '.' && r[2] == '/')
+        else if ((r[0] == '/') && (r[1] == '.') && (r[2] == '/'))
         {
           *q++ = '/';
           r += 3;
@@ -1425,6 +1425,7 @@ size_t mutt_file_tidy_path(char *buf, bool rsym)
       }
       *q = 0;
     }
+
     /* Fix any combo of parent paths. This works by tracking directory
      * portions via pointers. These pointers are updated as parent paths
      * are encountered.
@@ -1439,8 +1440,8 @@ size_t mutt_file_tidy_path(char *buf, bool rsym)
        */
       char *level[MUTT_PATH_MAX_DEPTH];
       /* The following loop works such that if a parent directory is encountered,
-       * then the current level n is decremented so that the next path substring 
-       * will replace the previous one in the level array. Otherwise, the 
+       * then the current level n is decremented so that the next path substring
+       * will replace the previous one in the level array. Otherwise, the
        * level is incremented.
        *
        * Given the current nature of the loop, if a parent directory is
@@ -1450,8 +1451,8 @@ size_t mutt_file_tidy_path(char *buf, bool rsym)
        * possibly be optimized out with a different loop design.
        */
       bool parent_last = false;
-      char *r = buf;  // iterator
-      size_t n = 0; // current level
+      char *r = buf; // iterator
+      size_t n = 0;  // current level
 
       while ((r = strchr(r, '/')) && (r[1] != '\0'))
       {
@@ -1472,11 +1473,11 @@ size_t mutt_file_tidy_path(char *buf, bool rsym)
         r++;
       }
 
-      r = buf;  // iterator from start of path
+      r = buf; // iterator from start of path
 
       if (parent_last && (n == 0)) // The parent of root, is simply root
       {
-        *r = '/';
+        r[0] = '/';
         r[1] = '\0';
       }
       else
@@ -1485,12 +1486,13 @@ size_t mutt_file_tidy_path(char *buf, bool rsym)
         {
           *(r++) = level[i][0]; // write the first character ('/')
           // write the path component until '/' or end-of-string
-          for (char *j = &level[i][1]; *j != '/' && *j != '\0'; j++)
+          for (char *j = &level[i][1]; (*j != '/') && (*j != '\0'); j++)
             *(r++) = *j;
         }
-        *r = '\0';
+        r[0] = '\0';
       }
     }
+
     /* Let's cut off the trailing / if it exists and we're not at the root
      * Note: doing this because the browser GUI is a lil' buggy and if it
      * sees a path '/a/b/' going to the parent only changes it to '/a/b',
